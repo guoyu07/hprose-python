@@ -21,8 +21,8 @@
 import types, traceback
 from io import BytesIO
 from sys import modules, exc_info
-from hprose.io import HproseTags, HproseWriter, HproseReader
-from hprose.common import HproseResultMode, HproseException
+from .io import HproseTags, HproseWriter, HproseReader
+from .common import HproseResultMode, HproseException
 
 def _getInstanceMethods(cls):
     v = vars(cls)

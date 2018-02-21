@@ -25,7 +25,7 @@ from inspect import isclass
 from sys import modules
 from threading import RLock
 from uuid import UUID
-from hprose.common import HproseException
+from .common import HproseException
 
 ZERO = datetime.timedelta(0)
 

@@ -24,11 +24,24 @@ class HproseResultMode:
     Raw = 2
     RawWithEndTag = 3
 
+
 class HproseException(Exception):
     pass
 
+
+class NetErrorException(HproseException):
+    """网络异常，数据没有发送到服务方"""
+    pass
+
+
+class ServiceException(HproseException):
+    """通讯成功，服务方主动抛出的异常"""
+    pass
+
+
 class HproseFilter(object):
     def inputFilter(self, data, context):
-        return data;
+        return data
+
     def outputFilter(self, data, context):
-        return data;
+        return data

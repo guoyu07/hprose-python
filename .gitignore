@@ -1,2 +1,6 @@
 MANIFEST
 dist
+.idea
+.vscode
+.project
+testcode
