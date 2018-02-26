@@ -22,10 +22,11 @@ import re, datetime
 import urllib.parse
 from math import trunc
 from random import random
-from hprose.server import HproseService
+from .server import HproseService
+
 
 class HproseHttpService(HproseService):
-    def __init__(self, sessionName = None):
+    def __init__(self, sessionName=None):
         super(HproseHttpService, self).__init__()
         self.crossDomain = False
         self.p3p = False
@@ -39,7 +40,7 @@ class HproseHttpService(HproseService):
         self._lastModified = datetime.datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT")
         self._etag = '"%x:%x"' % (trunc(random() * 2147483647), trunc(random() * 2147483647))
 
-    def __call__(self, environ, start_response = None):
+    def __call__(self, environ, start_response=None):
         result = self.handle(environ)
         # WSGI 2
         if start_response == None:
@@ -58,7 +59,7 @@ class HproseHttpService(HproseService):
         path = (environ['SCRIPT_NAME'] + environ['PATH_INFO']).lower()
         if (path == '/crossdomain.xml'):
             if ((environ.get('HTTP_IF_MODIFIED_SINCE', '') == self._lastModified) and
-                (environ.get('HTTP_IF_NONE_MATCH', '') == self._etag)):
+                    (environ.get('HTTP_IF_NONE_MATCH', '') == self._etag)):
                 return ['304 Not Modified', [], [b'']]
             else:
                 header = [('Content-Type', 'text/xml'),
@@ -71,7 +72,7 @@ class HproseHttpService(HproseService):
         path = (environ['SCRIPT_NAME'] + environ['PATH_INFO']).lower()
         if (path == '/clientaccesspolicy.xml'):
             if ((environ.get('HTTP_IF_MODIFIED_SINCE', '') == self._lastModified) and
-                (environ.get('HTTP_IF_NONE_MATCH', '') == self._etag)):
+                    (environ.get('HTTP_IF_NONE_MATCH', '') == self._etag)):
                 return ['304 Not Modified', [], [b'']]
             else:
                 header = [('Content-Type', 'text/xml'),
@@ -84,9 +85,9 @@ class HproseHttpService(HproseService):
         header = [('Content-Type', 'text/plain')]
         if self.p3p:
             header.append(('P3P', 'CP="CAO DSP COR CUR ADM DEV TAI PSA PSD ' +
-                         'IVAi IVDi CONi TELo OTPi OUR DELi SAMi OTRi UNRi ' +
-                         'PUBi IND PHY ONL UNI PUR FIN COM NAV INT DEM CNT ' +
-                         'STA POL HEA PRE GOV"'))
+                           'IVAi IVDi CONi TELo OTPi OUR DELi SAMi OTRi UNRi ' +
+                           'PUBi IND PHY ONL UNI PUR FIN COM NAV INT DEM CNT ' +
+                           'STA POL HEA PRE GOV"'))
         if self.crossDomain:
             origin = environ.get("HTTP_ORIGIN", "null")
             if origin != "null":
@@ -129,7 +130,7 @@ class HproseHttpService(HproseService):
         finally:
             f.close()
 
-    crossDomainXmlFile = property(fget = _getCrossDomainXmlFile, fset = _setCrossDomainXmlFile)
+    crossDomainXmlFile = property(fget=_getCrossDomainXmlFile, fset=_setCrossDomainXmlFile)
 
     def _getCrossDomainXmlContent(self):
         return self._crossDomainXmlContent
@@ -138,7 +139,7 @@ class HproseHttpService(HproseService):
         self._crossDomainXmlFile = None
         self._crossDomainXmlContent = value
 
-    crossDomainXmlContent = property(fget = _getCrossDomainXmlContent, fset = _setCrossDomainXmlContent)
+    crossDomainXmlContent = property(fget=_getCrossDomainXmlContent, fset=_setCrossDomainXmlContent)
 
     def _getClientAccessPolicyXmlFile(self):
         return self._clientAccessPolicyXmlFile
@@ -151,7 +152,7 @@ class HproseHttpService(HproseService):
         finally:
             f.close()
 
-    clientAccessPolicyXmlFile = property(fget = _getClientAccessPolicyXmlFile, fset = _setClientAccessPolicyXmlFile)
+    clientAccessPolicyXmlFile = property(fget=_getClientAccessPolicyXmlFile, fset=_setClientAccessPolicyXmlFile)
 
     def _getClientAccessPolicyXmlContent(self):
         return self._clientAccessPolicyXmlContent
@@ -160,7 +161,9 @@ class HproseHttpService(HproseService):
         self._clientAccessPolicyXmlFile = None
         self._clientAccessPolicyXmlContent = value
 
-    clientAccessPolicyXmlContent = property(fget = _getClientAccessPolicyXmlContent, fset = _setClientAccessPolicyXmlContent)
+    clientAccessPolicyXmlContent = property(fget=_getClientAccessPolicyXmlContent,
+                                            fset=_setClientAccessPolicyXmlContent)
+
 
 ################################################################################
 # UrlMapMiddleware                                                             #
@@ -180,7 +183,7 @@ class UrlMapMiddleware:
             compiled = re.compile(regexp)
             self.__url_mapping.append((compiled, app))
 
-    def __call__(self, environ, start_response = None):
+    def __call__(self, environ, start_response=None):
         script_name = environ['SCRIPT_NAME']
         path_info = environ['PATH_INFO']
         path = urllib.parse.quote(script_name) + urllib.parse.quote(path_info)
@@ -191,12 +194,13 @@ class UrlMapMiddleware:
             return [b'404 Not Found']
         return ('404 Not Found', [('Content-Type', 'text/plain')], [b'404 Not Found'])
 
+
 ################################################################################
 # HproseHttpServer                                                             #
 ################################################################################
 
 class HproseHttpServer(HproseHttpService):
-    def __init__(self, host = '', port = 80, app = None):
+    def __init__(self, host='', port=80, app=None):
         super(HproseHttpServer, self).__init__()
         self.host = host
         self.port = port

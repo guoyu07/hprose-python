@@ -19,29 +19,32 @@
 ############################################################
 
 import http.client, re, threading
+import time
 import urllib.parse
 from calendar import timegm
-from hprose.common import HproseException
-import time
-from hprose.client import HproseClient
+from .common import HproseException
+from .client import HproseClient
 
 # _http2time from cookielib.py in python 2.5
 EPOCH_YEAR = 1970
 
 MONTHS_LOWER = ["jan", "feb", "mar", "apr", "may", "jun",
-          "jul", "aug", "sep", "oct", "nov", "dec"]
+                "jul", "aug", "sep", "oct", "nov", "dec"]
+
 
 def _timegm(tt):
     year, month, mday, hour, minute, sec = tt[:6]
     if ((year >= EPOCH_YEAR) and (1 <= month <= 12) and (1 <= mday <= 31) and
-        (0 <= hour <= 24) and (0 <= minute <= 59) and (0 <= sec <= 61)):
+            (0 <= hour <= 24) and (0 <= minute <= 59) and (0 <= sec <= 61)):
         return timegm(tt)
     else:
         return None
 
+
 UTC_ZONES = {"GMT": None, "UTC": None, "UT": None, "Z": None}
 
 TIMEZONE_RE = re.compile(r"^([-+])?(\d\d?):?(\d\d)?$")
+
 
 def offset_from_tz_string(tz):
     offset = None
@@ -57,11 +60,12 @@ def offset_from_tz_string(tz):
                 offset = -offset
     return offset
 
+
 def _str2time(day, mon, yr, hr, minute, sec, tz):
     # translate month name to number
     # month numbers start with 1 (January)
     try:
-        mon = MONTHS_LOWER.index(mon.lower())+1
+        mon = MONTHS_LOWER.index(mon.lower()) + 1
     except ValueError:
         # maybe it's already a number
         try:
@@ -92,8 +96,10 @@ def _str2time(day, mon, yr, hr, minute, sec, tz):
         yr = yr + cur_yr - m
         m = m - tmp
         if abs(m) > 50:
-            if m > 0: yr = yr + 100
-            else: yr = yr - 100
+            if m > 0:
+                yr = yr + 100
+            else:
+                yr = yr - 100
 
     # convert UTC time tuple to seconds since epoch (not timezone-adjusted)
     t = _timegm((yr, mon, day, hr, min, sec, tz))
@@ -109,6 +115,7 @@ def _str2time(day, mon, yr, hr, minute, sec, tz):
         t = t - offset
 
     return t
+
 
 STRICT_DATE_RE = re.compile(
     r"^[SMTWF][a-z][a-z], (\d\d) ([JFMASOND][a-z][a-z]) (\d\d\d\d) (\d\d):(\d\d):(\d\d) GMT$")
@@ -131,6 +138,8 @@ LOOSE_HTTP_DATE_RE = re.compile(
        \s*
     (?:\(\w+\))?       # ASCII representation of timezone in parens.
        \s*$""", re.X)
+
+
 def _http2time(text):
     """Returns time in seconds since epoch of time represented by a string.
 
@@ -176,7 +185,7 @@ def _http2time(text):
     text = WEEKDAY_RE.sub("", text, 1)  # Useless weekday
 
     # tz is time zone specifier string
-    day, mon, yr, hr, minute, sec, tz = [None]*7
+    day, mon, yr, hr, minute, sec, tz = [None] * 7
 
     # loose regexp parse
     m = LOOSE_HTTP_DATE_RE.search(text)
@@ -187,14 +196,17 @@ def _http2time(text):
 
     return _str2time(day, mon, yr, hr, minute, sec, tz)
 
+
 _cookieManager = {}
 _cookieManagerLock = threading.RLock()
+
 
 def _setCookie(cookieList, host):
     _cookieManagerLock.acquire()
     try:
         for cookies in cookieList:
-            if cookies == '': continue
+            if cookies == '':
+                continue
             cookies = cookies.strip().split(';')
             cookie = {}
             value = cookies[0].strip().split('=', 1)
@@ -223,12 +235,14 @@ def _setCookie(cookieList, host):
                 cookie['DOMAIN'] = cookie['DOMAIN'].lower()
             else:
                 cookie['DOMAIN'] = host
+
             cookie['SECURE'] = 'SECURE' in cookie
-            if (cookie['DOMAIN'] not in _cookieManager):
+            if cookie['DOMAIN'] not in _cookieManager:
                 _cookieManager[cookie['DOMAIN']] = {}
             _cookieManager[cookie['DOMAIN']][cookie['name']] = cookie
     finally:
         _cookieManagerLock.release()
+
 
 def _getCookie(host, path, secure):
     cookies = []
@@ -243,8 +257,8 @@ def _getCookie(host, path, secure):
                     if 'EXPIRES' in cookie and time.time() > cookie['EXPIRES']:
                         names.append(name)
                     elif path.startswith(cookie['PATH']):
-                        if (((secure and cookie['SECURE']) or
-                             not cookie['SECURE']) and cookie['value'] != ''):
+                        if (((secure and cookie['SECURE'])
+                             or not cookie['SECURE']) and cookie['value'] != ''):
                             cookies.append(cookie['name'] + '=' + cookie['value'])
                 for name in names:
                     del _cookieManager[domain][name]
@@ -254,54 +268,55 @@ def _getCookie(host, path, secure):
         return '; '.join(cookies)
     return ''
 
+
 class HproseHttpClient(HproseClient):
-    def __init__(self, uri = None):
-        self.__header = {}
-        self.__proxy = None
+    def __init__(self, uri=None):
+        self._header = {}
+        self._proxy = None
         self.timeout = 30
         self.keepAlive = True
         self.keepAliveTimeout = 300
-        self.__scheme = None
-        self.__port = None
-        self.__host = None
-        self.__ip = None
-        self.__path = None
-        self.__query = None
-        self.__fragment = None
+        self._scheme = None
+        self._port = None
+        self._host = None
+        self._ip = None
+        self._path = None
+        self._query = None
+        self._fragment = None
         super(HproseHttpClient, self).__init__(uri)
 
     def setUri(self, uri):
         super(HproseHttpClient, self).setUri(uri)
         uri = urllib.parse.urlsplit(uri, 'http')
-        self.__scheme = uri[0]
-        if self.__scheme == 'https':
-            self.__port = 443
+        self._scheme = uri[0]
+        if self._scheme == 'https':
+            self._port = 443
         else:
-            self.__port = 80
+            self._port = 80
         netloc = uri[1]
         if "@" in netloc:
             netloc = netloc.split("@", 1)[1]
         if ":" in netloc:
             netloc = netloc.split(":", 1)
-            self.__port = int(netloc[1])
+            self._port = int(netloc[1])
             netloc = netloc[0]
-        self.__host = netloc.lower()
-        if self.__host == 'localhost':
-            self.__ip = '127.0.0.1'
+        self._host = netloc.lower()
+        if self._host == 'localhost':
+            self._ip = '127.0.0.1'
         else:
-            self.__ip = self.__host
-        self.__path = uri[2]
-        self.__query = uri[-2]
-        self.__fragment = uri[-1]
+            self._ip = self._host
+        self._path = uri[2]
+        self._query = uri[-2]
+        self._fragment = uri[-1]
 
-    def setProxy(self, host, port = None):
-        if host == None:
-            self.__proxy = None
+    def setProxy(self, host, port=None):
+        if host is None:
+            self._proxy = None
         else:
             proxy = urllib.parse.urlsplit(host)
             scheme = proxy[0]
-            if port == None:
-                if self.__scheme == 'https':
+            if port is None:
+                if self._scheme == 'https':
                     port = 443
                 else:
                     port = 80
@@ -317,26 +332,26 @@ class HproseHttpClient(HproseClient):
                 ip = '127.0.0.1'
             else:
                 ip = host
-            self.__proxy = {'scheme': scheme, 'host': host, 'ip':ip, 'port': port}
+            self._proxy = {'scheme': scheme, 'host': host, 'ip': ip, 'port': port}
 
-    proxy = property(fset = setProxy)
+    proxy = property(fset=setProxy)
 
     def setHeader(self, name, value):
         lname = name.lower()
         if (lname != 'content-type' and
-            lname != 'content-length' and
-            lname != 'host'):
+                    lname != 'content-length' and
+                    lname != 'host'):
             if value:
-                self.__header[name] = value
+                self._header[name] = value
             else:
-                del self.__header[name]
+                del self._header[name]
 
     def _sendAndReceive(self, data):
         header = {'Content-Type': 'application/hprose'}
-        header['Host'] = self.__host
-        if (self.__port != 80):
-            header['Host'] += ':' + str(self.__port)
-        cookie = _getCookie(self.__host, self.__path, self.__scheme == 'https')
+        header['Host'] = self._host
+        if self._port != 80:
+            header['Host'] += ':' + str(self._port)
+        cookie = _getCookie(self._host, self._path, self._scheme == 'https')
         if cookie != '':
             header['Cookie'] = cookie
         if self.keepAlive:
@@ -344,27 +359,29 @@ class HproseHttpClient(HproseClient):
             header['Keep-Alive'] = str(self.keepAliveTimeout)
         else:
             header['Connection'] = 'close'
-        for name in self.__header: header[name] = self.__header[name]
-        if self.__proxy == None:
-            if self.__scheme == 'https':
-                httpclient = http.client.HTTPSConnection(self.__ip, self.__port, timeout = self.timeout)
+        for name in self._header:
+            header[name] = self._header[name]
+        if self._proxy is None:
+            if self._scheme == 'https':
+                httpclient = http.client.HTTPSConnection(self._ip, self._port, timeout=self.timeout)
             else:
-                httpclient = http.client.HTTPConnection(self.__ip, self.__port, timeout = self.timeout)
+                httpclient = http.client.HTTPConnection(self._ip, self._port, timeout=self.timeout)
         else:
-            if self.__proxy['scheme'] == 'https':
-                httpclient = http.client.HTTPSConnection(self.__proxy['ip'], self.__proxy['port'], timeout = self.timeout)
+            if self._proxy['scheme'] == 'https':
+                httpclient = http.client.HTTPSConnection(self._proxy['ip'], self._proxy['port'], timeout=self.timeout)
             else:
-                httpclient = http.client.HTTPConnection(self.__proxy['ip'], self.__proxy['port'], timeout = self.timeout)
-        if self.__proxy == None:
-            path = urllib.parse.urlunsplit(('', '', self.__path, self.__query, self.__fragment))
+                httpclient = http.client.HTTPConnection(self._proxy['ip'], self._proxy['port'], timeout=self.timeout)
+        if self._proxy is None:
+            path = urllib.parse.urlunsplit(('', '', self._path, self._query, self._fragment))
         else:
             path = self._uri
         httpclient.request('POST', path, data, header)
         resp = httpclient.getresponse()
         if resp.status == 200:
             cookieList = resp.getheader('set-cookie', '').split(',')
+            # TODO 按照HTTP协议标准, set-cookie2 头已经被废弃
             cookieList.extend(resp.getheader('set-cookie2', '').split(','))
-            _setCookie(cookieList, self.__host)
+            _setCookie(cookieList, self._host)
             data = resp.read()
             httpclient.close()
             return data

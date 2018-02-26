@@ -18,12 +18,12 @@
 #                                                          #
 ############################################################
 
-from hprose.common import HproseResultMode, HproseException
-from hprose.io import HproseTags, HproseClassManager, HproseRawReader, HproseReader, HproseWriter, HproseFormatter
-from hprose.client import HproseClient
-from hprose.server import HproseService
-from hprose.httpclient import HproseHttpClient
-from hprose.httpserver import HproseHttpService, HproseHttpServer, UrlMapMiddleware
+from .common import HproseResultMode, HproseException
+from .io import HproseTags, HproseClassManager, HproseRawReader, HproseReader, HproseWriter, HproseFormatter
+from .client import HproseClient
+from .server import HproseService
+from .httpclient import HproseHttpClient
+from .httpserver import HproseHttpService, HproseHttpServer, UrlMapMiddleware
 
 ResultMode = HproseResultMode
 Tags = HproseTags
